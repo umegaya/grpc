@@ -185,6 +185,7 @@
   INSTALL ?= install
   RM ?= rm -f
   PKG_CONFIG ?= pkg-config
+  RANLIB ?= ranlib -no_warning_for_no_symbols
 
   ifndef VALID_CONFIG_$(CONFIG)
   $(error Invalid CONFIG value '$(CONFIG)')
@@ -785,9 +786,9 @@
 
   $(LIBDIR)/$(CONFIG)/protobuf/libprotobuf.a: third_party/protobuf/configure
   	$(E) "[MAKE]    Building protobuf"
-  	$(Q)(cd third_party/protobuf ; CC="$(CC)" CXX="$(CXX)" LDFLAGS="$(LDFLAGS_$(CONFIG)) -g $(PROTOBUF_LDFLAGS_EXTRA)" CPPFLAGS="$(PIC_CPPFLAGS) $(CPPFLAGS_$(CONFIG)) -g $(PROTOBUF_CPPFLAGS_EXTRA)" ./configure --disable-shared --enable-static)
+  	$(Q)(cd third_party/protobuf ; CC="$(CC)" CXX="$(CXX)" LDFLAGS="$(LDFLAGS_$(CONFIG)) -g $(PROTOBUF_LDFLAGS_EXTRA)" CPPFLAGS="$(PIC_CPPFLAGS) $(CPPFLAGS_$(CONFIG)) -g $(PROTOBUF_CPPFLAGS_EXTRA)" AR="$(firstword $(AR))" ./configure --disable-shared --enable-static $(PROTOBUF_CONFIG_OPTS))
   	$(Q)$(MAKE) -C third_party/protobuf clean
-  	$(Q)$(MAKE) -C third_party/protobuf
+  	$(Q)$(MAKE) -C third_party/protobuf AR="$(firstword $(AR))"
   	$(Q)mkdir -p $(LIBDIR)/$(CONFIG)/protobuf
   	$(Q)mkdir -p $(BINDIR)/$(CONFIG)/protobuf
   	$(Q)cp third_party/protobuf/src/.libs/libprotoc.a $(LIBDIR)/$(CONFIG)/protobuf
@@ -1397,7 +1398,7 @@
   % endif
 
   ifeq ($(SYSTEM),Darwin)
-  	$(Q) ranlib -no_warning_for_no_symbols $(LIBDIR)/$(CONFIG)/lib${lib.name}.a
+  	$(Q) $(RANLIB) $(LIBDIR)/$(CONFIG)/lib${lib.name}.a
   endif
 
   <%
@@ -1532,6 +1533,7 @@
   # system openssl headers regardless of other configuration
   # we do so here with a target specific variable assignment
   $(${tgt.name.upper()}_OBJS): CFLAGS := -Ithird_party/boringssl/include $(CFLAGS) -Wno-sign-conversion -Wno-conversion -Wno-unused-value $(NO_W_EXTRA_SEMI)
+  $(${tgt.name.upper()}_OBJS): CFLAGS += -DOPENSSL_NO_ASM
   $(${tgt.name.upper()}_OBJS): CXXFLAGS := -Ithird_party/boringssl/include $(CXXFLAGS)
   $(${tgt.name.upper()}_OBJS): CPPFLAGS += -DOPENSSL_NO_ASM -D_GNU_SOURCE
   % else:
