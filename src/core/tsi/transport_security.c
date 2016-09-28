@@ -60,6 +60,8 @@ const char *tsi_result_to_string(tsi_result result) {
       return "TSI_OUT_OF_RESOURCES";
     case TSI_ASYNC:
       return "TSI_ASYNC";
+    case TSI_REMOTE_PEER_CLOSED:
+      return "TSI_REMOTE_PEER_CLOSED";
     default:
       return "UNKNOWN";
   }

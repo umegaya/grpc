@@ -45,6 +45,7 @@ typedef enum {
   TSI_HANDSHAKE_IN_PROGRESS = 11,
   TSI_OUT_OF_RESOURCES = 12,
   TSI_ASYNC = 13
+  TSI_REMOTE_PEER_CLOSED = 14
 } tsi_result;
 
 typedef enum {
