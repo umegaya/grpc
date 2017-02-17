@@ -184,6 +184,10 @@ static void on_read(grpc_exec_ctx *exec_ctx, void *user_data,
       if (result != TSI_OK) {
         gpr_log(GPR_ERROR, "Decryption error: %s",
                 tsi_result_to_string(result));
+        if (result == TSI_REMOTE_PEER_CLOSED) {
+            /* when remote peer closed case, some data may received on first ssl_read */
+            cur += unprotected_buffer_size_written;
+        }
         break;
       }
       message_bytes += processed_message_size;
@@ -220,7 +224,7 @@ static void on_read(grpc_exec_ctx *exec_ctx, void *user_data,
 
   if (result != TSI_OK) {
     if (result != TSI_REMOTE_PEER_CLOSED) { /* let callback to process last read buffer */
-      gpr_slice_buffer_reset_and_unref_internal(exec_ctx, ep->read_buffer);
+      grpc_slice_buffer_reset_and_unref_internal(exec_ctx, ep->read_buffer);
     }
     call_read_cb(exec_ctx, ep, grpc_set_tsi_error_result(
                                    GRPC_ERROR_CREATE("Unwrap failed"), result));
