@@ -42,6 +42,8 @@
 #include "src/core/lib/support/string.h"
 #include "src/core/lib/tsi/transport_security_interface.h"
 
+#include <string.h>
+
 #define STAGING_BUFFER_SIZE 8192
 
 typedef struct {
@@ -144,7 +146,7 @@ static void call_read_cb(grpc_exec_ctx *exec_ctx, secure_endpoint *ep,
 
 static void on_read(grpc_exec_ctx *exec_ctx, void *user_data,
                     grpc_error *error) {
-  unsigned i;
+  unsigned i; bool https = false;
   uint8_t keep_looping = 0;
   tsi_result result = TSI_OK;
   secure_endpoint *ep = (secure_endpoint *)user_data;
@@ -176,8 +178,15 @@ static void on_read(grpc_exec_ctx *exec_ctx, void *user_data,
         gpr_log(GPR_ERROR, "Decryption error: %s",
                 tsi_result_to_string(result));
         if (result == TSI_REMOTE_PEER_CLOSED) {
-            /* when remote peer closed case, some data may received on first ssl_read */
-            cur += unprotected_buffer_size_written;
+            char *p = ep->wrapped_ep->vtable->get_peer(ep->wrapped_ep);
+            //here is too deep to give some option to transport...
+            https = (strcmp(p + strlen(p) - 4, ":443") == 0);
+            //gpr_log(GPR_ERROR, "peer: %s(%s)", p, https ? "https" : "other");
+            free(p);
+            if (https) {
+                /* when https' remote peer closed case, some data may received on first ssl_read */
+                cur += unprotected_buffer_size_written;
+            }
         }
         break;
       }
@@ -214,7 +223,7 @@ static void on_read(grpc_exec_ctx *exec_ctx, void *user_data,
   gpr_slice_buffer_reset_and_unref(&ep->source_buffer);
 
   if (result != TSI_OK) {
-    if (result != TSI_REMOTE_PEER_CLOSED) {
+    if (result != TSI_REMOTE_PEER_CLOSED || !https) {
       gpr_slice_buffer_reset_and_unref(ep->read_buffer);
     }
     call_read_cb(exec_ctx, ep, grpc_set_tsi_error_result(
